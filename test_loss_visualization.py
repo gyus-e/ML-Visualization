@@ -18,11 +18,10 @@ os.makedirs(FIGS_DIR, exist_ok=True)
 # Filter for TEST phase only
 test_df = df[df['phase'] == 'TEST'].copy()
 
-# Group by hidden_layer_size, learning_rate, and momentum, then average across seeds
-grouped_loss = test_df.groupby(['hidden_layer_size', 'learning_rate', 'momentum'])['loss'].mean().reset_index()
-grouped_accuracy = test_df.groupby(['hidden_layer_size', 'learning_rate', 'momentum'])['accuracy'].mean().reset_index()
+for metric in ['loss', 'accuracy']:
 
-for grouped, metric in [(grouped_loss, 'loss'), (grouped_accuracy, 'accuracy')]:
+    grouped = test_df.groupby(['hidden_layer_size', 'learning_rate', 'momentum'])[metric].mean().reset_index()
+    std_grouped = test_df.groupby(['hidden_layer_size', 'learning_rate', 'momentum'])[metric].std().reset_index()
 
     # Get unique values for each parameter
     hidden_sizes = sorted(grouped['hidden_layer_size'].unique())
@@ -66,6 +65,12 @@ for grouped, metric in [(grouped_loss, 'loss'), (grouped_accuracy, 'accuracy')]:
     # Plot bars for each combination
     for i, combo in enumerate(combinations):
         combo_data = grouped[grouped['combo'] == combo]
+        combo_std_data = std_grouped.copy()
+        combo_std_data['combo'] = combo_std_data.apply(
+            lambda row: f"LR={row['learning_rate']}, M={row['momentum']}", axis=1
+        )
+        combo_std_data = combo_std_data[combo_std_data['combo'] == combo]
+
 
         # Parse learning rate and momentum from combo string
         lr = float(combo.split(',')[0].split('=')[1])
@@ -77,18 +82,22 @@ for grouped, metric in [(grouped_loss, 'loss'), (grouped_accuracy, 'accuracy')]:
         
         # Create a list of metrics aligned with hidden_sizes
         metrics = []
+        stds = []
         for size in hidden_sizes:
             size_data = combo_data[combo_data['hidden_layer_size'] == size]
+            size_std_data = combo_std_data[combo_std_data['hidden_layer_size'] == size]
             if len(size_data) > 0:
                 metrics.append(size_data[metric].values[0])
+                stds.append(size_std_data[metric].values[0] if len(size_std_data) > 0 else 0)
             else:
                 metrics.append(0)  # If no data for this combination
+                stds.append(0)
         
         # Calculate position for this group of bars
         positions = x + (i - n_combos/2 + 0.5) * bar_width
         
         # Plot the bars
-        ax.bar(positions, metrics, bar_width, label=combo, color=color, alpha=0.8)
+        ax.bar(positions, metrics, bar_width, label=combo, color=color, alpha=0.8, yerr=stds, capsize=5, edgecolor='black', linewidth=0.5)
 
     # Customize the plot
     ax.set_xlabel('Hidden Layer Size', fontsize=12, fontweight='bold')
@@ -113,10 +122,10 @@ for grouped, metric in [(grouped_loss, 'loss'), (grouped_accuracy, 'accuracy')]:
         
         positions = x + (i - n_combos/2 + 0.5) * bar_width
         
-        for pos, value in zip(positions, metrics):
-            if value > 0:  # Only show label if there's data
-                ax.text(pos, value + 0.02, f'{value:.3f}', ha='center', va='bottom', 
-                    fontsize=7, rotation=90) # TODO: CAMBIARE rotation A 0 PER ORIZZONTALE
+        # for pos, value in zip(positions, metrics):
+        #     if value > 0:  # Only show label if there's data
+        #         ax.text(pos, value + 0.02, f'{value:.3f}', ha='center', va='bottom', 
+        #             fontsize=7, rotation=90) # TODO: CAMBIARE rotation A 0 PER ORIZZONTALE
 
     plt.tight_layout()
     plt.savefig(os.path.join(FIGS_DIR, f'test_{metric}.png'), dpi=300, bbox_inches='tight')
