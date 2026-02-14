@@ -39,7 +39,15 @@ for phase in ['TRAIN', 'VAL']:
             size_df = phase_df[phase_df['hidden_layer_size'] == FIXED_HIDDEN_SIZE].copy()
 
             # Group by epoch, learning_rate, and momentum, then average across seeds
-            grouped = size_df.groupby(['epoch', 'learning_rate', 'momentum'])[metric].mean().reset_index()
+            grouped_mean = size_df.groupby(['epoch', 'learning_rate', 'momentum'])[metric].mean().reset_index()
+            grouped_std = size_df.groupby(['epoch', 'learning_rate', 'momentum'])[metric].std().reset_index()
+
+            grouped = pd.merge(
+                grouped_mean,
+                grouped_std,
+                on=['epoch', 'learning_rate', 'momentum'],
+                suffixes=('', '__std')
+            )
 
             # Get unique values
             learning_rates = sorted(grouped['learning_rate'].unique())
@@ -84,7 +92,7 @@ for phase in ['TRAIN', 'VAL']:
                 intensity = get_intensity(m)
                 color = adjust_color(base_color, intensity)
 
-                
+                # Plot mean line
                 ax.plot(combo_data['epoch'], combo_data[metric], 
                         marker='o', 
                         linestyle='-',
@@ -93,6 +101,17 @@ for phase in ['TRAIN', 'VAL']:
                         label=combo, 
                         color=color,
                         alpha=0.8)
+                
+                # Plot std deviation as shaded region
+                ax.fill_between(
+                    combo_data['epoch'],
+                    combo_data[metric] - combo_data[f'{metric}__std'],
+                    combo_data[metric] + combo_data[f'{metric}__std'],
+                    color=color,
+                    alpha=0.2,
+                    label=None
+                )
+
 
             # Customize the plot
             ax.set_xlabel('Epoch', fontsize=12, fontweight='bold')
@@ -118,7 +137,7 @@ for phase in ['TRAIN', 'VAL']:
             print(f"Total combinations: {len(combinations)}")
 
             # Print final training loss for each combination
-            print(f"\nFinal {phase.capitalize()} loss (at last epoch) for each combination:")
+            print(f"\nFinal {phase.capitalize()} {metric} (at last epoch) for each combination:")
             for combo in combinations:
                 combo_data = grouped[grouped['combo'] == combo].sort_values('epoch')
                 final_loss = combo_data.iloc[-1][metric]
