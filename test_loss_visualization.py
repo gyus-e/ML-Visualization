@@ -5,7 +5,7 @@ import matplotlib.colors as mcolors
 import numpy as np
 
 LOGS_DIR = 'logs'
-FIGS_DIR = 'figures/15_epochs'
+FIGS_DIR = 'figures'
 
 # Read the CSV file
 CSV_PATH = os.path.join(LOGS_DIR, 'full.csv')

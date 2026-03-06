@@ -8,21 +8,25 @@ FIGS_DIR = 'figures/overfitting'
 os.makedirs(FIGS_DIR, exist_ok=True)
 
 # Load the CSV file
-df = pd.read_csv(os.path.join(LOGS_DIR, 'overfitting.csv'), delimiter=';')
+df = pd.read_csv(os.path.join(LOGS_DIR, 'full.csv'), delimiter=';')
+val_df = df[df['phase'] == 'VAL']
 
 # Set the parameters to filter by
 HIDDEN_LAYER_SIZES = df['hidden_layer_size'].unique()
-SEEDS = df['seed'].unique()
+SEEDS = df['random_seed'].unique()
 
 for HIDDEN_LAYER_SIZE in HIDDEN_LAYER_SIZES:
     for SEED in SEEDS:
 
         # Filter the data
-        filtered_df = df[(df['hidden_layer_size'] == HIDDEN_LAYER_SIZE) & 
-                        (df['seed'] == SEED)]
+        filtered_df = val_df[(val_df['hidden_layer_size'] == HIDDEN_LAYER_SIZE) & 
+                        (val_df['random_seed'] == SEED)]
 
         # Sort by epoch to ensure proper plotting
         filtered_df = filtered_df.sort_values('epoch')
+
+        # Filter to only include epochs where loss is increasing (overfitting)
+        filtered_df = filtered_df[filtered_df['loss'].diff() > 0]
 
         # Create the plot
         plt.figure(figsize=(10, 6))
@@ -30,7 +34,7 @@ for HIDDEN_LAYER_SIZE in HIDDEN_LAYER_SIZES:
 
         plt.xlabel('Epoch', fontsize=12)
         plt.ylabel('Loss', fontsize=12)
-        plt.title(f'Loss vs Epoch\n(hidden_layer_size={HIDDEN_LAYER_SIZE}, seed={SEED})', fontsize=14)
+        plt.title(f'Loss vs Epoch\n(hidden_layer_size={HIDDEN_LAYER_SIZE}, random_seed={SEED})', fontsize=14)
         plt.grid(True, alpha=0.3)
 
         # Add some styling
