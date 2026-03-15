@@ -21,7 +21,7 @@ phase_name_mapping = {
 }
 
 for phase in ('TRAIN', 'VAL'):
-    for epoch in (1, 5, 10, 15):
+    for epoch in (1, 5, 10, 15, 30):
         os.makedirs(os.path.join(FIGS_DIR, phase, f"epoch_{epoch}"), exist_ok=True)
 
         # Filter for current phase and epoch
